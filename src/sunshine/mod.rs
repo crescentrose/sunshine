@@ -1,3 +1,5 @@
+mod errors;
+
 extern crate sunrise;
 extern crate chrono;
 extern crate corelocation_rs;
@@ -6,34 +8,38 @@ extern crate structopt;
 use structopt::StructOpt;
 use chrono::prelude::*;
 use corelocation_rs::{Location, Locator};
+use errors::SunshineError;
 
-#[derive(Debug)]
-pub struct SunshineError(String);
+type Result<T> = std::result::Result<T, SunshineError>;
+
+pub enum TimeOfDay {
+    Day,
+    Night
+}
+
+pub struct Measurements {
+    pub sunrise: DateTime<FixedOffset>,
+    pub sunset: DateTime<FixedOffset>,
+    pub time_of_day: TimeOfDay
+}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sunshine")]
 pub struct Opt {
     /// Location string to calculate sunrise and sunset for
     /// Format as "@lat long", e.g. "@45.815 15.9819"
-    location: String,
+    pub location: String,
 
     /// Output current time of day ("day" or "night") instead of accurate sunset time
     #[structopt(short, long)]
-    simple: bool,
+    pub simple: bool,
 
     /// Format string, based on chrono's strftime format
     #[structopt(short, long, default_value = "%c")]
-    format: String
+    pub format: String
 }
 
-impl std::fmt::Display for SunshineError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let SunshineError(error) = self;
-        write!(f, "{}", error)
-    }
-}
-
-pub fn calculate(opt: Opt) -> Result<(), SunshineError>{
+pub fn calculate(opt: Opt) -> Result<Measurements> {
     let now: DateTime<Local> = Local::now();
     let offset = now.offset();
     let (lat, long) = location_from_string(&opt.location[..])?;
@@ -52,37 +58,37 @@ pub fn calculate(opt: Opt) -> Result<(), SunshineError>{
         &NaiveDateTime::from_timestamp(sunset_ts, 0)
     );
 
-    if opt.simple {
-        match now.timestamp() {
-            d if d > sunrise_ts && d < sunset_ts => println!("day"),
-            _ => println!("night")
-        }
-    } else {
-        println!("sunrise: {}", sunrise.format(&opt.format[..]));
-        println!("sunset: {}", sunset.format(&opt.format[..]));
-    }
+    let time_of_day = match now.timestamp() {
+        d if d > sunrise_ts && d < sunset_ts => TimeOfDay::Day,
+        _ => TimeOfDay::Night
+    };
 
-    Ok(())
+    // The compiler will probably inline this anyway
+    Ok(Measurements {
+        sunrise: sunrise,
+        sunset: sunset,
+        time_of_day: time_of_day
+    })
 }
 
-fn location_from_string(location: &str) -> Result<(f64, f64), SunshineError> {
+fn location_from_string(location: &str) -> Result<(f64, f64)> {
     match &location[..1] {
         "@" => location_from_coords(&location[1..]),
         "#" => location_from_name(&location[1..]),
         "!" => location_from_auto(&location[1..]),
-        _ => Err(SunshineError(String::from("malformed location string")))
+        _ => Err(SunshineError::MalformedLocationString)
     }
 }
 
-fn location_from_coords(coords: &str) -> Result<(f64, f64), SunshineError> {
+fn location_from_coords(coords: &str) -> Result<(f64, f64)> {
     let coords: Vec<&str> = coords.split(' ').collect();
 
-    let lat: Option<Result<f64, std::num::ParseFloatError>> = match coords.get(0) {
+    let lat = match coords.get(0) {
         Some(val) => Some(val.parse()),
         None => None
     };
 
-    let lng: Option<Result<f64, std::num::ParseFloatError>> = match coords.get(1) {
+    let lng = match coords.get(1) {
         Some(val) => Some(val.parse()),
         None => None
     };
@@ -90,19 +96,19 @@ fn location_from_coords(coords: &str) -> Result<(f64, f64), SunshineError> {
     match(lat, lng) {
         (Some(lat), Some(lng)) => match(lat, lng) {
             (Ok(lat), Ok(lng)) => Ok((lat, lng)),
-            _ => Err(SunshineError(String::from("malformed coordinate string")))
+            _ => Err(SunshineError::MalformedLocationString)
         },
-        _ => Err(SunshineError(String::from("malformed coordinate string")))
+        _ => Err(SunshineError::MalformedLocationString)
     }
 }
 
-fn location_from_name(_name: &str) -> Result<(f64, f64), SunshineError> {
+fn location_from_name(_name: &str) -> Result<(f64, f64)> {
     panic!("unimplemented")
 }
 
 // Attempt to read location from the system using CoreLocation
 // If that fails, fall back to a default value
-fn location_from_auto(fallback: &str) -> Result<(f64, f64), SunshineError> {
+fn location_from_auto(fallback: &str) -> Result<(f64, f64)> {
     match Location::get() {
         Ok(location) => Ok((location.latitude, location.longitude)),
         Err(_) => location_from_string(fallback)
