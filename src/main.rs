@@ -9,6 +9,7 @@ use std::process;
 fn main() {
     // Have to `use structopt::StructOpt`, otherwise the `from_args` method does not get imported
     let opt = Opt::from_args();
+
     // I still don't understand fully why we need to clone here, but we have to be polite to the
     // compiler, as the compiler is our friend.
     // I assume that we transfer ownership of the `opt` constant to the `calculate` function, and
