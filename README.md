@@ -11,11 +11,13 @@ sunshine [--simple] [--format="fmtstr"] <location>
 `location` can be:
 
 - latitude and longitude prefixed with an @ character
+- `.` to fetch the location from the network using
+    [FreeGeoIP](https://freegeoip.app)
 - **unimplemented** location name prefixed with an # character (I need to figure
   out the best way to do this without pulling huge databases from the net).
 - prefix the location string with an `!` to draw location data from macOS
-  CoreLocation if available. The rest of the location string will be used as a
-  fallback.
+  CoreLocation if available, or the GeoIP API. The rest of the location string
+  will be used as a fallback.
 
 Examples:
 
@@ -24,7 +26,10 @@ Examples:
   => sunset and sunrise times in Zagreb, Croatia
 
 !@45.8 15.9
-  => attempt to get GPS data, default to (45.8, 15.9) if unavailable
+  => attempt to get GPS data or the GeoIP API, default to (45.8, 15.9) if unavailable
+
+.
+  => attempt to get data from the GeoIP API
 
 #Venice, US
   => Not yet implemented, will result in a panic!
