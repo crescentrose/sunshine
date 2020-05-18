@@ -1,7 +1,7 @@
 extern crate corelocation_rs;
 
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 #[derive(Debug)]
 #[allow(dead_code)] // We know CoreLocationUnavailable won't be used on non-Mac systems
@@ -10,7 +10,7 @@ pub enum SunshineError {
     CoreLocationUnavailable,
     CoreLocationError(corelocation_rs::Error),
     ApiError(reqwest::Error),
-    JsonError(serde_json::Error)
+    JsonError(serde_json::Error),
 }
 
 impl fmt::Display for SunshineError {
@@ -20,7 +20,7 @@ impl fmt::Display for SunshineError {
             SunshineError::CoreLocationError(_) => write!(f, "corelocation failure"),
             SunshineError::CoreLocationUnavailable => write!(f, "corelocation unavailable"),
             SunshineError::ApiError(err) => write!(f, "api connection error: {:?}", err),
-            SunshineError::JsonError(err) => write!(f, "api deserialization error: {:?}", err)
+            SunshineError::JsonError(err) => write!(f, "api deserialization error: {:?}", err),
         }
     }
 }
@@ -32,7 +32,7 @@ impl Error for SunshineError {
             SunshineError::CoreLocationError(_) => "corelocation failure",
             SunshineError::CoreLocationUnavailable => "corelocation unavailable",
             SunshineError::ApiError(_) => "api connection error",
-            SunshineError::JsonError(_) => "api deserialization error"
+            SunshineError::JsonError(_) => "api deserialization error",
         }
     }
 
@@ -42,7 +42,7 @@ impl Error for SunshineError {
             SunshineError::CoreLocationError(cause) => Some(cause),
             SunshineError::JsonError(cause) => Some(cause),
             SunshineError::MalformedLocationString => None,
-            SunshineError::CoreLocationUnavailable => None
+            SunshineError::CoreLocationUnavailable => None,
         }
     }
 }

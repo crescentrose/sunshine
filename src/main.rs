@@ -2,9 +2,9 @@ extern crate structopt;
 
 mod sunshine;
 
+use std::process;
 use structopt::StructOpt;
 use sunshine::*;
-use std::process;
 
 fn main() {
     // Have to `use structopt::StructOpt`, otherwise the `from_args` method does not get imported
@@ -24,14 +24,14 @@ fn main() {
             if simple {
                 match result.time_of_day {
                     TimeOfDay::Day => println!("day"),
-                    TimeOfDay::Night => println!("night")
+                    TimeOfDay::Night => println!("night"),
                 }
             } else {
                 println!("sunrise: {}", result.sunrise.format(&format[..]));
                 println!("sunset: {}", result.sunset.format(&format[..]));
             }
             process::exit(0)
-        },
+        }
         Err(error) => {
             eprintln!("{}", error);
             process::exit(1);

@@ -1,26 +1,26 @@
 mod errors;
 mod locators;
 
-extern crate sunrise;
 extern crate chrono;
 extern crate structopt;
+extern crate sunrise;
 
-use structopt::StructOpt;
 use chrono::prelude::*;
 use errors::SunshineError;
 use locators::location_from_string;
+use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, SunshineError>;
 
 pub enum TimeOfDay {
     Day,
-    Night
+    Night,
 }
 
 pub struct Measurements {
     pub sunrise: DateTime<FixedOffset>,
     pub sunset: DateTime<FixedOffset>,
-    pub time_of_day: TimeOfDay
+    pub time_of_day: TimeOfDay,
 }
 
 #[derive(StructOpt, Debug)]
@@ -36,7 +36,7 @@ pub struct Opt {
 
     /// Format string, based on chrono's strftime format
     #[structopt(short, long, default_value = "%c")]
-    pub format: String
+    pub format: String,
 }
 
 pub fn calculate(opt: Opt) -> Result<Measurements> {
@@ -44,29 +44,26 @@ pub fn calculate(opt: Opt) -> Result<Measurements> {
     let offset = now.offset();
     let location = location_from_string(&opt.location[..])?;
     let (sunrise_ts, sunset_ts) = sunrise::sunrise_sunset(
-            location.lat,
-            location.long,
-            now.date().year(),
-            now.date().month(),
-            now.date().day());
-
-    let sunrise = offset.from_utc_datetime(
-        &NaiveDateTime::from_timestamp(sunrise_ts, 0)
+        location.lat,
+        location.long,
+        now.date().year(),
+        now.date().month(),
+        now.date().day(),
     );
 
-    let sunset = offset.from_utc_datetime(
-        &NaiveDateTime::from_timestamp(sunset_ts, 0)
-    );
+    let sunrise = offset.from_utc_datetime(&NaiveDateTime::from_timestamp(sunrise_ts, 0));
+
+    let sunset = offset.from_utc_datetime(&NaiveDateTime::from_timestamp(sunset_ts, 0));
 
     let time_of_day = match now.timestamp() {
         d if d > sunrise_ts && d < sunset_ts => TimeOfDay::Day,
-        _ => TimeOfDay::Night
+        _ => TimeOfDay::Night,
     };
 
     // The compiler will probably inline this anyway
     Ok(Measurements {
         sunrise: sunrise,
         sunset: sunset,
-        time_of_day: time_of_day
+        time_of_day: time_of_day,
     })
 }
