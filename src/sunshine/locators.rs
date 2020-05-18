@@ -5,6 +5,7 @@ use super::Result;
 use corelocation_rs::Locator;
 use serde::Deserialize;
 
+#[derive(Debug)]
 pub struct Location {
     pub lat: f64,
     pub long: f64,
@@ -78,8 +79,32 @@ fn location_from_coords(coords: &str) -> Result<Location> {
     }
 }
 
-fn location_from_name(_name: &str) -> Result<Location> {
-    panic!("unimplemented")
+#[derive(Deserialize)]
+struct NominatimLocation {
+    lat: String,
+    lon: String,
+}
+
+fn location_from_name(name: &str) -> Result<Location> {
+    let api_url = "https://nominatim.openstreetmap.org/search/";
+    let client = reqwest::blocking::Client::new();
+    let request = client
+        .get(api_url)
+        .header(
+            reqwest::header::USER_AGENT,
+            "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
+        )
+        .query(&[("q", name), ("format", "json")])
+        .build()?;
+
+    let resp = client.execute(request)?;
+    let body = resp.text()?;
+    let locations: Vec<NominatimLocation> = serde_json::from_str(&body[..])?;
+
+    match locations.first() {
+        Some(location) => location_from_coords(&format!("{} {}", location.lat, location.lon)[..]),
+        None => Err(SunshineError::UnknownLocationName),
+    }
 }
 
 #[derive(Deserialize)]
