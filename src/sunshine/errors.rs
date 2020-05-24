@@ -12,6 +12,8 @@ pub enum SunshineError {
     CoreLocationError(corelocation_rs::Error),
     ApiError(reqwest::Error),
     JsonError(serde_json::Error),
+    CacheLoadError,
+    CacheWriteError,
 }
 
 impl fmt::Display for SunshineError {
@@ -23,6 +25,7 @@ impl fmt::Display for SunshineError {
             SunshineError::UnknownLocationName => write!(f, "requested location can not be found"),
             SunshineError::ApiError(err) => write!(f, "api connection error: {:?}", err),
             SunshineError::JsonError(err) => write!(f, "api deserialization error: {:?}", err),
+            _ => write!(f, "unknown error"),
         }
     }
 }
@@ -36,6 +39,7 @@ impl Error for SunshineError {
             SunshineError::UnknownLocationName => "requested location can not be found",
             SunshineError::ApiError(_) => "api connection error",
             SunshineError::JsonError(_) => "api deserialization error",
+            _ => "unknown error",
         }
     }
 
@@ -44,9 +48,7 @@ impl Error for SunshineError {
             SunshineError::ApiError(cause) => Some(cause),
             SunshineError::CoreLocationError(cause) => Some(cause),
             SunshineError::JsonError(cause) => Some(cause),
-            SunshineError::MalformedLocationString => None,
-            SunshineError::CoreLocationUnavailable => None,
-            SunshineError::UnknownLocationName => None,
+            _ => None
         }
     }
 }

@@ -1,11 +1,13 @@
 extern crate corelocation_rs;
 
 use super::errors::*;
+use super::name_cache::LocationCache;
+use super::name_cache::LocationCacher;
 use super::Result;
 use corelocation_rs::Locator;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub struct Location {
     pub lat: f64,
     pub long: f64,
@@ -37,6 +39,12 @@ impl From<FreeGeoApiLocation> for Location {
             lat: loc.latitude,
             long: loc.longitude,
         }
+    }
+}
+
+impl From<NominatimLocation> for Location {
+    fn from(loc: NominatimLocation) -> Self {
+        location_from_coords(&format!("{} {}", loc.lat, loc.lon)[..]).unwrap()
     }
 }
 
@@ -79,32 +87,36 @@ fn location_from_coords(coords: &str) -> Result<Location> {
     }
 }
 
-#[derive(Deserialize)]
-struct NominatimLocation {
+#[derive(Deserialize, Clone)]
+pub struct NominatimLocation {
     lat: String,
     lon: String,
 }
 
 fn location_from_name(name: &str) -> Result<Location> {
-    let api_url = "https://nominatim.openstreetmap.org/search/";
-    let client = reqwest::blocking::Client::new();
-    let request = client
-        .get(api_url)
-        .header(
-            reqwest::header::USER_AGENT,
-            "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
-        )
-        .query(&[("q", name), ("format", "json")])
-        .build()?;
+    let mut cache = LocationCache::load().or_else(|_| LocationCache::new())?;
 
-    let resp = client.execute(request)?;
-    let body = resp.text()?;
-    let locations: Vec<NominatimLocation> = serde_json::from_str(&body[..])?;
+    cache.fetch(name, || {
+        let api_url = "https://nominatim.openstreetmap.org/search/";
+        let client = reqwest::blocking::Client::new();
+        let request = client
+            .get(api_url)
+            .header(
+                reqwest::header::USER_AGENT,
+                "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
+            )
+            .query(&[("q", name), ("format", "json")])
+            .build()?;
 
-    match locations.first() {
-        Some(location) => location_from_coords(&format!("{} {}", location.lat, location.lon)[..]),
-        None => Err(SunshineError::UnknownLocationName),
-    }
+        let resp = client.execute(request)?;
+        let body = resp.text()?;
+        let locations: Vec<NominatimLocation> = serde_json::from_str(&body[..])?;
+
+        match locations.first() {
+            Some(location) => Ok(Location::from(location.clone())),
+            None => Err(SunshineError::UnknownLocationName),
+        }
+    })
 }
 
 #[derive(Deserialize)]

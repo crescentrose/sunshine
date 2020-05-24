@@ -1,5 +1,6 @@
 mod errors;
 mod locators;
+mod name_cache;
 
 extern crate chrono;
 extern crate structopt;
