@@ -12,8 +12,11 @@ pub enum SunshineError {
     CoreLocationError(corelocation_rs::Error),
     ApiError(reqwest::Error),
     JsonError(serde_json::Error),
+    CacheSerializationError(serde_json::Error),
+    CacheDeserializationError(serde_json::Error),
     CacheLoadError,
     CacheWriteError,
+    CacheDirectoryUnavailable,
 }
 
 impl fmt::Display for SunshineError {
@@ -25,7 +28,17 @@ impl fmt::Display for SunshineError {
             SunshineError::UnknownLocationName => write!(f, "requested location can not be found"),
             SunshineError::ApiError(err) => write!(f, "api connection error: {:?}", err),
             SunshineError::JsonError(err) => write!(f, "api deserialization error: {:?}", err),
-            _ => write!(f, "unknown error"),
+            SunshineError::CacheSerializationError(err) => {
+                write!(f, "cache serialization error: {:?}", err)
+            }
+            SunshineError::CacheDeserializationError(err) => {
+                write!(f, "cache serialization error: {:?}", err)
+            }
+            SunshineError::CacheDirectoryUnavailable => {
+                write!(f, "system cache directory could not be accessed")
+            }
+            SunshineError::CacheLoadError => write!(f, "cache could not be loaded"),
+            SunshineError::CacheWriteError => write!(f, "could not write to cache"),
         }
     }
 }
@@ -39,7 +52,13 @@ impl Error for SunshineError {
             SunshineError::UnknownLocationName => "requested location can not be found",
             SunshineError::ApiError(_) => "api connection error",
             SunshineError::JsonError(_) => "api deserialization error",
-            _ => "unknown error",
+            SunshineError::CacheSerializationError(_) => "cache serialization error",
+            SunshineError::CacheDeserializationError(_) => "cache serialization error",
+            SunshineError::CacheDirectoryUnavailable => {
+                "system cache directory could not be accessed"
+            }
+            SunshineError::CacheLoadError => "cache could not be loaded",
+            SunshineError::CacheWriteError => "could not write to cache",
         }
     }
 
@@ -48,7 +67,9 @@ impl Error for SunshineError {
             SunshineError::ApiError(cause) => Some(cause),
             SunshineError::CoreLocationError(cause) => Some(cause),
             SunshineError::JsonError(cause) => Some(cause),
-            _ => None
+            SunshineError::CacheSerializationError(cause) => Some(cause),
+            SunshineError::CacheDeserializationError(cause) => Some(cause),
+            _ => None,
         }
     }
 }

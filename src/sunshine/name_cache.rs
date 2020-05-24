@@ -26,11 +26,16 @@ struct CacheData {
 pub trait LocationCacher {
     /// Create a new cache.
     fn new() -> Result<LocationCache, SunshineError>;
-    /// Load an existing cache from a file
+    /// Load cache from a file
     fn load() -> Result<LocationCache, SunshineError>;
+    /// Save the current cache file
     fn save(&self) -> Result<(), SunshineError>;
+    /// Retrieve an item from the cache
     fn get(&self, location_name: &str) -> Option<Location>;
+    /// Store an item to the cache
     fn set(&mut self, location_name: &str, location: &Location);
+    /// Attempt to retrieve an item from the cache. If it doesn't exist, call the `on_miss` closure
+    /// and then store and save its return value.
     fn fetch<F>(&mut self, location_name: &str, on_miss: F) -> Result<Location, SunshineError>
     where
         F: Fn() -> Result<Location, SunshineError>;
@@ -95,17 +100,19 @@ impl LocationCache {
 fn cache_file_path() -> Result<PathBuf, SunshineError> {
     let project_dirs = match ProjectDirs::from("hr", "halcyon", "sunshine") {
         Some(path) => path,
-        None => return Err(SunshineError::CacheLoadError),
+        None => return Err(SunshineError::CacheDirectoryUnavailable),
     };
 
-    std::fs::create_dir_all(project_dirs.cache_dir()).map_err(|_| SunshineError::CacheLoadError)?;
+    std::fs::create_dir_all(project_dirs.cache_dir())
+        .map_err(|_| SunshineError::CacheDirectoryUnavailable)?;
 
     Ok(project_dirs.cache_dir().join(CACHE_FILENAME))
 }
 
 fn deserialize_json(filename: &PathBuf) -> Result<CacheData, SunshineError> {
     let loaded_data = fs::read_to_string(filename).map_err(|_| SunshineError::CacheLoadError)?;
-    serde_json::from_str(&loaded_data[..]).map_err(|_| SunshineError::CacheLoadError)
+
+    serde_json::from_str(&loaded_data[..]).map_err(|e| SunshineError::CacheDeserializationError(e))
 }
 
 fn serialize_and_save(cache: &LocationCache) -> Result<(), SunshineError> {
@@ -114,7 +121,7 @@ fn serialize_and_save(cache: &LocationCache) -> Result<(), SunshineError> {
         .map_err(|_| SunshineError::CacheWriteError)?
         .write_all(
             serde_json::to_string(&cache.cache_data)
-                .map_err(|_| SunshineError::CacheWriteError)?
+                .map_err(|e| SunshineError::CacheSerializationError(e))?
                 .as_bytes(),
         )
         .map_err(|_| SunshineError::CacheWriteError)?;
