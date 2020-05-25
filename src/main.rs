@@ -16,7 +16,7 @@ fn main() {
     // when it ends it automatically frees the memory occupied by the options struct, so we could
     // either borrow it there or just clone the one thing we need here.
     let format = opt.format.clone();
-    let simple = opt.simple.clone();
+    let simple = opt.simple;
 
     match calculate(opt) {
         Ok(result) => {

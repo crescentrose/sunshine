@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-static CACHE_FILENAME: &'static str = "location_cache.json";
+static CACHE_FILENAME: &str = "location_cache.json";
 
 #[derive(Debug)]
 pub struct LocationCache {
@@ -66,7 +66,7 @@ impl LocationCacher for LocationCache {
     }
 
     fn get(&self, location_name: &str) -> Option<Location> {
-        self.cache_data.data.get(location_name).map(|l| *l)
+        self.cache_data.data.get(location_name).copied()
     }
 
     fn set(&mut self, location_name: &str, location: &Location) {
@@ -112,7 +112,7 @@ fn cache_file_path() -> Result<PathBuf, SunshineError> {
 fn deserialize_json(filename: &PathBuf) -> Result<CacheData, SunshineError> {
     let loaded_data = fs::read_to_string(filename).map_err(|_| SunshineError::CacheLoadError)?;
 
-    serde_json::from_str(&loaded_data[..]).map_err(|e| SunshineError::CacheDeserializationError(e))
+    serde_json::from_str(&loaded_data[..]).map_err(SunshineError::CacheDeserializationError)
 }
 
 fn serialize_and_save(cache: &LocationCache) -> Result<(), SunshineError> {
@@ -121,7 +121,7 @@ fn serialize_and_save(cache: &LocationCache) -> Result<(), SunshineError> {
         .map_err(|_| SunshineError::CacheWriteError)?
         .write_all(
             serde_json::to_string(&cache.cache_data)
-                .map_err(|e| SunshineError::CacheSerializationError(e))?
+                .map_err(SunshineError::CacheSerializationError)?
                 .as_bytes(),
         )
         .map_err(|_| SunshineError::CacheWriteError)?;

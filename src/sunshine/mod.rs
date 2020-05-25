@@ -63,8 +63,8 @@ pub fn calculate(opt: Opt) -> Result<Measurements> {
 
     // The compiler will probably inline this anyway
     Ok(Measurements {
-        sunrise: sunrise,
-        sunset: sunset,
-        time_of_day: time_of_day,
+        sunrise,
+        sunset,
+        time_of_day,
     })
 }

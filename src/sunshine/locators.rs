@@ -15,11 +15,9 @@ pub struct Location {
 
 impl From<(f64, f64)> for Location {
     fn from(loc: (f64, f64)) -> Self {
-        match loc {
-            (lat, long) => Location {
-                lat: lat,
-                long: long,
-            },
+        Location {
+            lat: loc.0,
+            long: loc.1
         }
     }
 }
