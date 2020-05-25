@@ -44,24 +44,6 @@ impl fmt::Display for SunshineError {
 }
 
 impl Error for SunshineError {
-    fn description(&self) -> &str {
-        match &*self {
-            SunshineError::MalformedLocationString => "malformed location string",
-            SunshineError::CoreLocationError(_) => "corelocation failure",
-            SunshineError::CoreLocationUnavailable => "corelocation unavailable",
-            SunshineError::UnknownLocationName => "requested location can not be found",
-            SunshineError::ApiError(_) => "api connection error",
-            SunshineError::JsonError(_) => "api deserialization error",
-            SunshineError::CacheSerializationError(_) => "cache serialization error",
-            SunshineError::CacheDeserializationError(_) => "cache serialization error",
-            SunshineError::CacheDirectoryUnavailable => {
-                "system cache directory could not be accessed"
-            }
-            SunshineError::CacheLoadError => "cache could not be loaded",
-            SunshineError::CacheWriteError => "could not write to cache",
-        }
-    }
-
     fn cause(&self) -> Option<&dyn Error> {
         match &*self {
             SunshineError::ApiError(cause) => Some(cause),
