@@ -7,7 +7,7 @@ use super::Result;
 use corelocation_rs::Locator;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct Location {
     pub lat: f64,
     pub long: f64,

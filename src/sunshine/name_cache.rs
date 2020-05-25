@@ -131,4 +131,56 @@ fn serialize_and_save(cache: &LocationCache) -> Result<(), SunshineError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    static TEST_LOCATION: Location = Location {
+        lat: 48.2082,
+        long: 16.3738,
+    };
+
+    #[test]
+    fn cache_get_set() {
+        let cache = setup_test_cache();
+
+        assert_eq!(cache.get("Vienna").unwrap(), TEST_LOCATION);
+    }
+
+    #[test]
+    fn cache_fetch_when_exists() {
+        let mut cache = setup_test_cache();
+        assert_eq!(
+            cache
+                .fetch("Vienna", || { panic!("should not execute!") })
+                .unwrap(),
+            TEST_LOCATION
+        );
+    }
+
+    #[test]
+    fn cache_fetch_when_does_not_exist() {
+        let mut cache = setup_test_cache();
+        let alexandria = Location {
+            lat: 31.2001,
+            long: 29.9187,
+        };
+        assert_eq!(
+            cache.fetch("Alexandria", || { Ok(alexandria) }).unwrap(),
+            alexandria
+        );
+    }
+
+    #[test]
+    fn cache_fetch_when_errors_out() {
+        let mut cache = setup_test_cache();
+        assert!(cache
+            .fetch("Basiltown", || {
+                Err(SunshineError::MalformedLocationString)
+            })
+            .is_err())
+    }
+
+    fn setup_test_cache() -> LocationCache {
+        let mut cache = LocationCache::new().unwrap();
+        cache.set("Vienna", &TEST_LOCATION);
+        cache
+    }
 }
