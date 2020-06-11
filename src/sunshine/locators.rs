@@ -7,6 +7,7 @@ use super::errors::*;
 use super::name_cache::LocationCache;
 use super::name_cache::LocationCacher;
 use super::Result;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -101,10 +102,16 @@ fn location_from_name(name: &str) -> Result<Location> {
     let mut cache = LocationCache::load().or_else(|_| LocationCache::new())?;
 
     cache.fetch(name, || {
-        let api_url = "https://nominatim.openstreetmap.org/search/";
+        #[cfg(not(test))]
+        let api_url = "https://nominatim.openstreetmap.org";
+        #[cfg(test)]
+        let api_url = &mockito::server_url();
+
         let client = reqwest::blocking::Client::new();
+        // We are fairly certain our hardcoded URLs won't cause a panic.
+        let url = Url::parse(api_url).unwrap().join("search").unwrap();
         let request = client
-            .get(api_url)
+            .get(url)
             .header(
                 reqwest::header::USER_AGENT,
                 "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
@@ -130,8 +137,12 @@ struct FreeGeoApiLocation {
 }
 
 fn location_from_network() -> Result<Location> {
-    let api_url = "https://freegeoip.app/json/";
-    let resp = reqwest::blocking::get(api_url)?;
+    #[cfg(not(test))]
+    let api_url = "https://freegeoip.app";
+    #[cfg(test)]
+    let api_url = &mockito::server_url();
+
+    let resp = reqwest::blocking::get(&format!("{}/json/", api_url))?;
     let body = resp.text()?;
     let location: FreeGeoApiLocation = serde_json::from_str(&body[..])?;
 
@@ -152,8 +163,12 @@ fn location_from_corelocation() -> Result<Location> {
 }
 
 #[cfg(test)]
+use mockito;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+    use mockito::mock;
 
     #[test]
     fn test_known_good_location_from_coords() {
@@ -164,5 +179,47 @@ mod tests {
     #[test]
     fn test_malformed_location_from_coords() {
         assert!(location_from_coords("foobar").is_err())
+    }
+
+    #[test]
+    fn test_from_network() {
+        let mock = mock("GET", "/json/")
+            .with_status(200)
+            .with_body(
+                r#"{
+                "ip":"0.0.0.0",
+                "country_code":"HR", "country_name":"Croatia",
+                "region_code":"21", "region_name":"City of Zagreb", "city":"Zagreb",
+                "zip_code":"10000", "time_zone":"Europe/Zagreb",
+                "latitude":45.8293, "longitude":15.9793, "metro_code":0}"#,
+            )
+            .create();
+        let location = location_from_network().unwrap();
+
+        mock.assert();
+
+        assert_eq!(location.lat, 45.8293);
+        assert_eq!(location.long, 15.9793);
+    }
+
+    #[test]
+    fn test_from_name() {
+        let mock = mock("GET", "/search?q=Amsterdam&format=json")
+            .with_status(200)
+            .with_body(
+                r#"[{
+                "lat":"52.37454030000001", "lon":"4.897975505617977",
+                "display_name":"Amsterdam, North Holland, Netherlands, The Netherlands"},
+                {"lat":"52.3727598", "lon":"4.8936041",
+                "display_name":"Amsterdam, North Holland, Netherlands, The Netherlands"}]"#,
+            )
+            .create();
+
+        let location = location_from_name(&"Amsterdam").unwrap();
+
+        mock.assert();
+
+        assert_eq!(location.lat, 52.37454030000001);
+        assert_eq!(location.long, 4.897975505617977);
     }
 }
