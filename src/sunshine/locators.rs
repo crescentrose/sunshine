@@ -6,6 +6,7 @@ use super::name_cache::LocationCacher;
 use super::Result;
 use corelocation_rs::Locator;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct Location {
@@ -40,9 +41,11 @@ impl From<FreeGeoApiLocation> for Location {
     }
 }
 
-impl From<NominatimLocation> for Location {
-    fn from(loc: NominatimLocation) -> Self {
-        location_from_coords(&format!("{} {}", loc.lat, loc.lon)[..]).unwrap()
+impl TryFrom<NominatimLocation> for Location {
+    type Error = SunshineError;
+
+    fn try_from(loc: NominatimLocation) -> Result<Self> {
+        location_from_coords(&format!("{} {}", loc.lat, loc.lon)[..])
     }
 }
 
@@ -111,7 +114,7 @@ fn location_from_name(name: &str) -> Result<Location> {
         let locations: Vec<NominatimLocation> = serde_json::from_str(&body[..])?;
 
         match locations.first() {
-            Some(location) => Ok(Location::from(location.clone())),
+            Some(location) => Location::try_from(location.clone()),
             None => Err(SunshineError::UnknownLocationName),
         }
     })
