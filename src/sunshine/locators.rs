@@ -114,7 +114,7 @@ fn location_from_name(name: &str) -> Result<Location> {
             .get(url)
             .header(
                 reqwest::header::USER_AGENT,
-                "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
+                "sunshine/0.3.0 (https://github.com/crescentrose/sunshine)",
             )
             .query(&[("q", name), ("format", "json")])
             .build()?;

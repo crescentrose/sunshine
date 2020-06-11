@@ -1,8 +1,15 @@
 [package]
 name = "sunshine"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Ivan Oštrić <ivan@halcyon.hr>"]
 edition = "2018"
+description = "☀️ when does the sun rise?"
+readme = "README.md"
+repository = "https://github.com/crescentrose/sunshine"
+homepage = "https://github.com/crescentrose/sunshine"
+license = "Apache-2.0"
+keywords = ["sunrise", "sunset"]
+categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
