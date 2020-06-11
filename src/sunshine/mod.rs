@@ -13,6 +13,7 @@ use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, SunshineError>;
 
+#[derive(Debug, PartialEq)]
 pub enum TimeOfDay {
     Day,
     Night,
@@ -41,22 +42,28 @@ pub struct Opt {
 }
 
 pub fn calculate(opt: Opt) -> Result<Measurements> {
-    let now: DateTime<Local> = Local::now();
-    let offset = now.offset();
-    let location = location_from_string(&opt.location[..])?;
+    let now = Local::now();
+    let now: DateTime<FixedOffset> =
+        DateTime::<FixedOffset>::from(Local::now()).with_timezone(now.offset());
+
+    calculate_for_time(now, opt.location)
+}
+
+pub fn calculate_for_time(time: DateTime<FixedOffset>, location: String) -> Result<Measurements> {
+    let location = location_from_string(&location[..])?;
     let (sunrise_ts, sunset_ts) = sunrise::sunrise_sunset(
         location.lat,
         location.long,
-        now.date().year(),
-        now.date().month(),
-        now.date().day(),
+        time.date().year(),
+        time.date().month(),
+        time.date().day(),
     );
 
+    let offset = time.offset();
     let sunrise = offset.from_utc_datetime(&NaiveDateTime::from_timestamp(sunrise_ts, 0));
-
     let sunset = offset.from_utc_datetime(&NaiveDateTime::from_timestamp(sunset_ts, 0));
 
-    let time_of_day = match now.timestamp() {
+    let time_of_day = match time.timestamp() {
         d if d > sunrise_ts && d < sunset_ts => TimeOfDay::Day,
         _ => TimeOfDay::Night,
     };
@@ -67,4 +74,20 @@ pub fn calculate(opt: Opt) -> Result<Measurements> {
         sunset,
         time_of_day,
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_from_location_string() {
+        let location = String::from("@45.81 15.98");
+        let time = DateTime::parse_from_rfc3339("2020-06-11T16:20:00+02:00").unwrap();
+        let calculated = calculate_for_time(time, location).unwrap();
+
+        assert_eq!(format!("{}", calculated.sunrise.format("%H:%M")), "05:05");
+        assert_eq!(format!("{}", calculated.sunset.format("%H:%M")), "20:45");
+        assert_eq!(calculated.time_of_day, TimeOfDay::Day);
+    }
 }
