@@ -72,7 +72,7 @@ impl LocationCacher for LocationCache {
     fn set(&mut self, location_name: &str, location: &Location) {
         self.cache_data
             .data
-            .insert(String::from(location_name), location.clone());
+            .insert(String::from(location_name), *location);
     }
 
     fn fetch<F>(&mut self, location_name: &str, on_miss: F) -> Result<Location, SunshineError>
