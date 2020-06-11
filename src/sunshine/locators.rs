@@ -1,10 +1,14 @@
 extern crate corelocation_rs;
 
 use super::errors::*;
+use super::name_cache::LocationCache;
+use super::name_cache::LocationCacher;
 use super::Result;
 use corelocation_rs::Locator;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct Location {
     pub lat: f64,
     pub long: f64,
@@ -12,11 +16,9 @@ pub struct Location {
 
 impl From<(f64, f64)> for Location {
     fn from(loc: (f64, f64)) -> Self {
-        match loc {
-            (lat, long) => Location {
-                lat: lat,
-                long: long,
-            },
+        Location {
+            lat: loc.0,
+            long: loc.1
         }
     }
 }
@@ -36,6 +38,14 @@ impl From<FreeGeoApiLocation> for Location {
             lat: loc.latitude,
             long: loc.longitude,
         }
+    }
+}
+
+impl TryFrom<NominatimLocation> for Location {
+    type Error = SunshineError;
+
+    fn try_from(loc: NominatimLocation) -> Result<Self> {
+        location_from_coords(&format!("{} {}", loc.lat, loc.lon)[..])
     }
 }
 
@@ -78,8 +88,36 @@ fn location_from_coords(coords: &str) -> Result<Location> {
     }
 }
 
-fn location_from_name(_name: &str) -> Result<Location> {
-    panic!("unimplemented")
+#[derive(Deserialize, Clone)]
+pub struct NominatimLocation {
+    lat: String,
+    lon: String,
+}
+
+fn location_from_name(name: &str) -> Result<Location> {
+    let mut cache = LocationCache::load().or_else(|_| LocationCache::new())?;
+
+    cache.fetch(name, || {
+        let api_url = "https://nominatim.openstreetmap.org/search/";
+        let client = reqwest::blocking::Client::new();
+        let request = client
+            .get(api_url)
+            .header(
+                reqwest::header::USER_AGENT,
+                "sunshine/0.2.0 (https://github.com/crescentrose/sunshine)",
+            )
+            .query(&[("q", name), ("format", "json")])
+            .build()?;
+
+        let resp = client.execute(request)?;
+        let body = resp.text()?;
+        let locations: Vec<NominatimLocation> = serde_json::from_str(&body[..])?;
+
+        match locations.first() {
+            Some(location) => Location::try_from(location.clone()),
+            None => Err(SunshineError::UnknownLocationName),
+        }
+    })
 }
 
 #[derive(Deserialize)]

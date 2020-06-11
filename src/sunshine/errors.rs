@@ -8,9 +8,15 @@ use std::fmt;
 pub enum SunshineError {
     MalformedLocationString,
     CoreLocationUnavailable,
+    UnknownLocationName,
     CoreLocationError(corelocation_rs::Error),
     ApiError(reqwest::Error),
     JsonError(serde_json::Error),
+    CacheSerializationError(serde_json::Error),
+    CacheDeserializationError(serde_json::Error),
+    CacheLoadError,
+    CacheWriteError,
+    CacheDirectoryUnavailable,
 }
 
 impl fmt::Display for SunshineError {
@@ -19,30 +25,33 @@ impl fmt::Display for SunshineError {
             SunshineError::MalformedLocationString => write!(f, "malformed location string"),
             SunshineError::CoreLocationError(_) => write!(f, "corelocation failure"),
             SunshineError::CoreLocationUnavailable => write!(f, "corelocation unavailable"),
+            SunshineError::UnknownLocationName => write!(f, "requested location can not be found"),
             SunshineError::ApiError(err) => write!(f, "api connection error: {:?}", err),
             SunshineError::JsonError(err) => write!(f, "api deserialization error: {:?}", err),
+            SunshineError::CacheSerializationError(err) => {
+                write!(f, "cache serialization error: {:?}", err)
+            }
+            SunshineError::CacheDeserializationError(err) => {
+                write!(f, "cache serialization error: {:?}", err)
+            }
+            SunshineError::CacheDirectoryUnavailable => {
+                write!(f, "system cache directory could not be accessed")
+            }
+            SunshineError::CacheLoadError => write!(f, "cache could not be loaded"),
+            SunshineError::CacheWriteError => write!(f, "could not write to cache"),
         }
     }
 }
 
 impl Error for SunshineError {
-    fn description(&self) -> &str {
-        match &*self {
-            SunshineError::MalformedLocationString => "malformed location string",
-            SunshineError::CoreLocationError(_) => "corelocation failure",
-            SunshineError::CoreLocationUnavailable => "corelocation unavailable",
-            SunshineError::ApiError(_) => "api connection error",
-            SunshineError::JsonError(_) => "api deserialization error",
-        }
-    }
-
     fn cause(&self) -> Option<&dyn Error> {
         match &*self {
             SunshineError::ApiError(cause) => Some(cause),
             SunshineError::CoreLocationError(cause) => Some(cause),
             SunshineError::JsonError(cause) => Some(cause),
-            SunshineError::MalformedLocationString => None,
-            SunshineError::CoreLocationUnavailable => None,
+            SunshineError::CacheSerializationError(cause) => Some(cause),
+            SunshineError::CacheDeserializationError(cause) => Some(cause),
+            _ => None,
         }
     }
 }
