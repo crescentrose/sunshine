@@ -18,7 +18,7 @@ impl From<(f64, f64)> for Location {
     fn from(loc: (f64, f64)) -> Self {
         Location {
             lat: loc.0,
-            long: loc.1
+            long: loc.1,
         }
     }
 }
