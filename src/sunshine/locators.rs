@@ -1,10 +1,12 @@
+#[cfg(target_os = "macos")]
 extern crate corelocation_rs;
+#[cfg(target_os = "macos")]
+use corelocation_rs::Locator;
 
 use super::errors::*;
 use super::name_cache::LocationCache;
 use super::name_cache::LocationCacher;
 use super::Result;
-use corelocation_rs::Locator;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -23,6 +25,7 @@ impl From<(f64, f64)> for Location {
     }
 }
 
+#[cfg(target_os = "macos")]
 impl From<corelocation_rs::Location> for Location {
     fn from(loc: corelocation_rs::Location) -> Self {
         Location {
