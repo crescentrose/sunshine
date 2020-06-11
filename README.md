@@ -2,6 +2,18 @@
 
 A simple CLI tool to determine sunrise and sunset times.
 
+## Installation
+
+The latest releases should be available on the
+[Releases](https://github.com/crescentrose/sunshine/releases) page, with
+precompiled versions for macOS and Linux. If you want to build the project
+yourself, you'll need the Rust compiler - follow the steps laid out in the
+[Building](#Building) section.
+
+Note that if you're running `sunshine` on macOS, you may need to grant the
+application location permissions if you're using CoreLocation (an authorization
+window will pop up).
+
 ## Usage
 
 ```
