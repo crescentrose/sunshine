@@ -4,6 +4,17 @@ A simple CLI tool to determine sunrise and sunset times.
 
 ## Installation
 
+### Via Homebrew (macOS only)
+
+Use the [Homebrew tap](https://github.com/crescentrose/homebrew-sunshine):
+
+```bash
+brew tap crescentrose/sunshine
+brew install sunshine
+```
+
+### Manually
+
 The latest releases should be available on the
 [Releases](https://github.com/crescentrose/sunshine/releases) page, with
 precompiled versions for macOS and Linux. If you want to build the project
