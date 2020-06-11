@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 extern crate corelocation_rs;
 
 use std::error::Error;
@@ -9,7 +10,6 @@ pub enum SunshineError {
     MalformedLocationString,
     CoreLocationUnavailable,
     UnknownLocationName,
-    CoreLocationError(corelocation_rs::Error),
     ApiError(reqwest::Error),
     JsonError(serde_json::Error),
     CacheSerializationError(serde_json::Error),
@@ -17,13 +17,14 @@ pub enum SunshineError {
     CacheLoadError,
     CacheWriteError,
     CacheDirectoryUnavailable,
+    #[cfg(target_os = "macos")]
+    CoreLocationError(corelocation_rs::Error),
 }
 
 impl fmt::Display for SunshineError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &*self {
             SunshineError::MalformedLocationString => write!(f, "malformed location string"),
-            SunshineError::CoreLocationError(_) => write!(f, "corelocation failure"),
             SunshineError::CoreLocationUnavailable => write!(f, "corelocation unavailable"),
             SunshineError::UnknownLocationName => write!(f, "requested location can not be found"),
             SunshineError::ApiError(err) => write!(f, "api connection error: {:?}", err),
@@ -39,6 +40,8 @@ impl fmt::Display for SunshineError {
             }
             SunshineError::CacheLoadError => write!(f, "cache could not be loaded"),
             SunshineError::CacheWriteError => write!(f, "could not write to cache"),
+            #[cfg(target_os = "macos")]
+            SunshineError::CoreLocationError(_) => write!(f, "corelocation failure"),
         }
     }
 }
@@ -47,10 +50,11 @@ impl Error for SunshineError {
     fn cause(&self) -> Option<&dyn Error> {
         match &*self {
             SunshineError::ApiError(cause) => Some(cause),
-            SunshineError::CoreLocationError(cause) => Some(cause),
             SunshineError::JsonError(cause) => Some(cause),
             SunshineError::CacheSerializationError(cause) => Some(cause),
             SunshineError::CacheDeserializationError(cause) => Some(cause),
+            #[cfg(target_os = "macos")]
+            SunshineError::CoreLocationError(cause) => Some(cause),
             _ => None,
         }
     }
